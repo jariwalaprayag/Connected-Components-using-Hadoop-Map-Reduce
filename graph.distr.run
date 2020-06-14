@@ -1,0 +1,28 @@
+#!/bin/bash
+#SBATCH -A uot143
+#SBATCH --job-name="graph"
+#SBATCH --output="graph.distr.out"
+#SBATCH --partition=compute
+## allocate 2 nodes for the Hadoop cluster: 2 datanodes, from which 1 is namenode
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --export=ALL 
+#SBATCH --time=60
+
+export HADOOP_CONF_DIR=/home/$USER/cometcluster
+module load hadoop/2.6.0
+export JAVA_HOME=/lib/jvm/java
+myhadoop-configure.sh
+start-dfs.sh
+start-yarn.sh
+
+hdfs dfs -mkdir -p /user/$USER
+hdfs dfs -put large-graph.txt /user/$USER/large-graph.txt
+hadoop jar graph.jar Graph /user/$USER/large-graph.txt /user/$USER/intermediate /user/$USER/output
+rm -rf output-distr
+mkdir output-distr
+hdfs dfs -get /user/$USER/output/part* output-distr
+
+stop-yarn.sh
+stop-dfs.sh
+myhadoop-cleanup.sh
